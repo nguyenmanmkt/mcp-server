@@ -43,10 +43,11 @@ npm install express
 ```
 
 ### 🏗️ 4. Build ứng dụng (Production)
+```bash
 sudo npm run build
 sudo npm install -g serve
 serve -s dist -l 5173
-
+```
 
 ## 📖 Giấy phép
 
