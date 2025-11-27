@@ -1,6 +1,12 @@
 # MCP Server Manager (Docker Edition)
 
+
 <img width="1912" height="457" alt="image" src="https://github.com/user-attachments/assets/7363723e-4acf-4b03-9711-013f8ab1b76d" />
+
+
+## 🌐 Website chính thức
+**https://mcpxiaozhi.cybersma.com/**
+
 
 Dự án **MCP Server Manager** cung cấp một MCP Server miễn phí cho cộng
 đồng, giúp bạn dễ dàng triển khai và quản lý thông qua Docker.
@@ -18,9 +24,6 @@ Dự án **MCP Server Manager** cung cấp một MCP Server miễn phí cho cộ
 Cho phép build image mcp-server trực tiếp từ link github
 Mẫu triển khai: https://github.com/nguyenmanmkt/mcp-xiaozhi-example.git
 
-## 🌐 Website chính thức
-
-**https://mcpxiaozhi.cybersma.com/**
 
 ### 🛠️ 1. Cài đặt Client
 ```bash
