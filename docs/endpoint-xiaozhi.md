@@ -6,6 +6,7 @@
 ![alt text](image.png)
 
 - Tìm phần cài đặt MCP
+  
 ![alt text](image-1.png)
 
 - Lấy điểm cuối MCP
