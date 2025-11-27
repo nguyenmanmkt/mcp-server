@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "local-stdio-calculator": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "calculator"]
+    },
+    "local-stdio-perplexity": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "perplexity_tool"]
+    },
+    "local-stdio-gemini-summary": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "gemini_summary"]
+    },
+    "local-stdio-invidious_mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "invidious_mcp"]
+    },
+    "remote-sse-server": {
+      "type": "sse",
+      "url": "https://api.example.com/sse",
+      "disabled": true
+    },
+    "remote-http-server": {
+      "type": "http",
+      "url": "https://api.example.com/mcp",
+      "disabled": true
+    }
+  }
+}

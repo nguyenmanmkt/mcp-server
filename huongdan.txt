@@ -1,0 +1,18 @@
+Xem dịch vụ:
+
+pm2 status
+
+
+Log:
+
+pm2 logs mcp-server
+
+
+Restart:
+
+pm2 restart mcp-server
+
+
+Stop:
+
+pm2 stop mcp-server

@@ -1,0 +1,400 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { 
+  Box, Server, Play, Square, Trash2, Plus, Users, Cpu, 
+  AlertCircle, Shield, Loader2, WifiOff, RefreshCw, Info, 
+  Link, Database, Settings, Save, Edit, X, LogOut, UserPlus, LogIn,
+  Eye, EyeOff, Lock, UserCheck, UserX, Ban, Activity, Layers, HardDrive, AlertTriangle,
+  Star, Code, Unlock, Hammer, Terminal, Github, GitBranch, Filter, FileText
+} from 'lucide-react';
+
+const API_URL = 'https://apidocker.cybersma.com/api';
+
+const SYSTEM_IMAGES = ['python', 'alpine', 'node', 'ubuntu', 'debian', 'busybox', 'golang', 'postgres', 'mysql', 'redis', 'mongo'];
+
+const canAccessImage = (userRole, imageAccessLevel) => {
+  const level = imageAccessLevel || 'free';
+  if (level === 'free') return true;
+  if (userRole === 'admin') return true;
+  if (level === 'vip') return ['vip', 'dev_user', 'admin'].includes(userRole);
+  if (level === 'dev') return ['dev_user', 'admin'].includes(userRole);
+  return false;
+};
+
+const isSystemImage = (imageName) => {
+  return SYSTEM_IMAGES.some(sys => imageName === sys || imageName.startsWith(sys));
+};
+
+const AuthScreen = ({ onLogin, onRegister, isLoading, error }) => {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [formData, setFormData] = useState({ username: '', password: '' });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isRegistering) onRegister(formData.username, formData.password);
+    else onLogin(formData.username, formData.password);
+  };
+
+  return (
+    <div className="h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4"><div className="p-4 bg-blue-600/20 rounded-full"><Cpu size={48} className="text-blue-500" /></div></div>
+          <h1 className="text-2xl font-bold text-white">DockManager</h1>
+          <p className="text-slate-400 text-sm mt-2">Container Orchestration System</p>
+        </div>
+        {error && <div className="bg-red-900/20 border border-red-800/50 text-red-400 p-3 rounded mb-4 text-sm flex items-center gap-2"><AlertCircle size={16} /> {error}</div>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Username</label><input type="text" required className="w-full bg-slate-950 border border-slate-800 rounded p-3 text-white focus:border-blue-600 outline-none" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})}/></div>
+          <div><label className="block text-xs font-bold text-slate-400 uppercase mb-1">Password</label><input type="password" required className="w-full bg-slate-950 border border-slate-800 rounded p-3 text-white focus:border-blue-600 outline-none" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}/></div>
+          <button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-500 text-white p-3 rounded font-bold flex justify-center items-center gap-2 mt-6">{isLoading ? <Loader2 className="animate-spin" size={20}/> : (isRegistering ? <UserPlus size={20}/> : <LogIn size={20}/>)}{isRegistering ? 'Create Account' : 'Sign In'}</button>
+        </form>
+        <div className="mt-6 text-center"><button onClick={() => { setIsRegistering(!isRegistering); setFormData({username:'', password:''}); }} className="text-slate-500 hover:text-blue-400 text-sm font-medium">{isRegistering ? 'Already have an account? Sign In' : 'Need an account? Register'}</button></div>
+      </div>
+    </div>
+  );
+};
+
+// --- LOG VIEWER MODAL (NEW) ---
+const ContainerLogsModal = ({ containerId, containerName, onClose, currentUser }) => {
+  const [logs, setLogs] = useState("Loading logs...");
+  const logsEndRef = useRef(null);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch(`${API_URL}/containers/${containerId}/logs`, {
+          headers: { 'x-user-id': currentUser.id }
+        });
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        const text = await res.text();
+        setLogs(text || "No logs available yet.");
+      } catch (e) {
+        setLogs(`Error loading logs: ${e.message}`);
+      }
+    };
+    fetchLogs();
+    // Auto refresh logs every 3s
+    const interval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(interval);
+  }, [containerId, currentUser]);
+
+  useEffect(() => {
+    if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [logs]);
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-xl shadow-2xl flex flex-col h-[80vh]">
+        <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-800 rounded-t-xl">
+          <h2 className="text-white font-bold text-lg flex items-center gap-2"><Terminal size={18} className="text-blue-400"/> Logs: {containerName}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><X/></button>
+        </div>
+        <div className="flex-1 overflow-auto p-4 bg-black font-mono text-xs text-slate-300 custom-scrollbar whitespace-pre-wrap">
+          {logs}
+          <div ref={logsEndRef} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- SYSTEM OVERVIEW ---
+const SystemOverview = ({ stats, totalUsers }) => {
+  if (!stats) return null;
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="bg-slate-800 border border-slate-700 p-4 rounded-lg flex flex-col"><span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-2"><Activity size={14}/> Containers</span><div className="flex items-baseline gap-2 mt-auto"><span className="text-2xl font-bold text-white">{stats.containers}</span><span className="text-xs text-green-400">({stats.running} running)</span></div></div>
+      <div className="bg-slate-800 border border-slate-700 p-4 rounded-lg flex flex-col"><span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-2"><Layers size={14}/> Images</span><div className="text-2xl font-bold text-white mt-auto">{stats.images}</div></div>
+      <div className="bg-slate-800 border border-slate-700 p-4 rounded-lg flex flex-col"><span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-2"><Users size={14}/> Users</span><div className="text-2xl font-bold text-white mt-auto">{totalUsers}</div></div>
+      <div className="bg-slate-800 border border-slate-700 p-4 rounded-lg flex flex-col"><span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-2"><HardDrive size={14}/> System</span><div className="mt-auto"><div className="text-sm text-white font-medium">{stats.os}</div><div className="text-xs text-slate-500">Docker v{stats.dockerVersion} • {stats.cpus} CPU</div></div></div>
+    </div>
+  );
+};
+
+// --- CREATE MODAL (UPDATED) ---
+const CreateContainerModal = ({ isOpen, onClose, images, onCreate, userQuotaRemaining, isLoading, imageMeta, userSavedVars, currentUser }) => {
+  const [name, setName] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [envVars, setEnvVars] = useState([]);
+  
+  const displayImages = images.filter(img => !isSystemImage(img.name));
+
+  // Helper để check quyền
+  const checkAccess = (img) => {
+    const meta = imageMeta[`${img.name}:${img.tag}`];
+    return canAccessImage(currentUser.role, meta?.accessLevel);
+  };
+
+  const handleSelectImage = useCallback((img) => { 
+      setSelectedImage(img); 
+      const key = `${img.name}:${img.tag}`; 
+      const meta = imageMeta[key]; 
+      setEnvVars(meta?.defaultEnvs ? [...meta.defaultEnvs] : []); 
+  }, [imageMeta]);
+  
+  // Auto select first VALID image
+  useEffect(() => { 
+    if(isOpen && displayImages.length && !selectedImage) {
+       const validImg = displayImages.find(img => checkAccess(img));
+       if(validImg) handleSelectImage(validImg);
+    } 
+  }, [isOpen, displayImages, selectedImage, handleSelectImage, currentUser]);
+  
+  if(!isOpen) return null;
+  
+  // Tính toán lại quyền cho image đang chọn
+  const isSelectedImageAllowed = selectedImage ? checkAccess(selectedImage) : false;
+
+  const handleSubmit = (e) => { 
+      e.preventDefault(); 
+      if(!selectedImage || !isSelectedImageAllowed) return; 
+      onCreate({ name, image: `${selectedImage.name}:${selectedImage.tag}`, env: envVars.filter(e=>e.key) }); 
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center mb-4"><h2 className="text-white font-bold text-xl">Launch Container</h2><button onClick={onClose} className="text-slate-400 hover:text-white"><X/></button></div>
+        {userQuotaRemaining <= 0 ? <div className="bg-red-900/20 text-red-400 p-3 rounded border border-red-800">Quota Limit Reached</div> : (
+          <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-60 overflow-y-auto border border-slate-700 rounded p-2 bg-slate-900/50">
+                {displayImages.length === 0 ? (
+                  <div className="text-center text-slate-500 text-xs py-4">No custom images available.</div>
+                ) : displayImages.map(img => {
+                  const key = `${img.name}:${img.tag}`;
+                  const meta = imageMeta[key];
+                  const level = meta?.accessLevel || 'free';
+                  const canAccess = canAccessImage(currentUser.role, level);
+                  const isSelected = selectedImage?.id===img.id && selectedImage?.name===img.name;
+
+                  return (
+                    <div 
+                      key={key} 
+                      // UPDATED: Luôn cho click để xem, nhưng hiển thị icon khóa
+                      onClick={() => handleSelectImage(img)} 
+                      className={`p-2 rounded mb-1 flex justify-between items-center cursor-pointer transition-colors 
+                        ${isSelected ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}
+                        ${!canAccess && !isSelected ? 'opacity-60' : ''}
+                      `}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="font-bold text-sm truncate w-32 flex items-center gap-1">
+                            {!canAccess && <Lock size={10} className="text-red-400"/>}
+                            {img.name}
+                        </div>
+                        <div className="text-xs opacity-70">{img.tag}</div>
+                      </div>
+                      {level !== 'free' && <span className={`text-[9px] px-1 rounded uppercase font-bold ${level==='vip'?'bg-yellow-500 text-black': 'bg-blue-400 text-black'}`}>{level}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="space-y-3">
+                <input className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white" placeholder="Name (Optional)" value={name} onChange={e=>setName(e.target.value)}/>
+                
+                {/* UPDATED: Description Area with Lock Warning */}
+                <div className={`text-xs p-3 rounded border h-36 overflow-y-auto leading-relaxed ${!isSelectedImageAllowed ? 'bg-red-900/10 border-red-900/30 text-slate-300' : 'bg-blue-900/20 border-blue-800/50 text-slate-400'}`}>
+                   {!isSelectedImageAllowed && selectedImage && (
+                       <div className="mb-2 text-red-400 font-bold flex items-center gap-1 border-b border-red-900/30 pb-1">
+                           <Lock size={12}/> Access Denied (Requires {imageMeta[`${selectedImage.name}:${selectedImage.tag}`]?.accessLevel?.toUpperCase()})
+                       </div>
+                   )}
+                   <div className="font-bold text-blue-300 mb-1 flex gap-1 items-center"><Info size={12}/> Info</div>
+                   {selectedImage && imageMeta[`${selectedImage.name}:${selectedImage.tag}`]?.description || "No description available."}
+                </div>
+
+                {userSavedVars?.length > 0 && (
+                  <div><label className="text-xs font-bold text-purple-400 block mb-1">Quick Vars</label><div className="flex flex-wrap gap-1">{userSavedVars.map((v, i) => <button key={i} type="button" onClick={()=>{const exist=envVars.find(e=>e.key===v.key);if(exist) setEnvVars(envVars.map(e=>e.key===v.key?{...e, value:v.value}:e));else setEnvVars([...envVars, {key:v.key, value:v.value}])}} className="text-[10px] bg-slate-700 text-white px-2 py-1 rounded">{v.label}</button>)}</div></div>
+                )}
+              </div>
+            </div>
+            {/* Env vars section... (kept same) */}
+            <div className="border-t border-slate-700 pt-3">
+               <div className="flex justify-between mb-2"><label className="text-xs text-slate-400 font-bold">Env Vars</label><button type="button" onClick={()=>setEnvVars([...envVars, {key:'', value:''}])} className="text-blue-400 text-xs">+ Add Raw</button></div>
+               <div className="max-h-40 overflow-y-auto space-y-2">
+                 {envVars.map((e, i) => (
+                   <div key={i} className="flex gap-2"><input className="w-1/3 bg-slate-900 border border-slate-700 rounded p-2 text-xs text-yellow-400" value={e.key} onChange={ev=>{const n=[...envVars];n[i].key=ev.target.value;setEnvVars(n)}} placeholder="KEY"/><input className="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-xs text-blue-300" value={e.value} onChange={ev=>{const n=[...envVars];n[i].value=ev.target.value;setEnvVars(n)}} placeholder="VALUE"/><button type="button" onClick={()=>setEnvVars(envVars.filter((_,idx)=>idx!==i))} className="text-red-500 px-2">x</button></div>
+                 ))}
+               </div>
+            </div>
+            
+            {/* Launch Button - Disabled if not allowed */}
+            <div className="flex gap-3 pt-2"><button type="button" onClick={onClose} className="flex-1 py-2 bg-slate-700 text-white rounded">Cancel</button>
+            <button type="submit" disabled={isLoading || !selectedImage || !isSelectedImageAllowed} className="flex-1 py-2 bg-blue-600 text-white rounded font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                {isLoading ? <Loader2 className="animate-spin inline"/> : isSelectedImageAllowed ? 'Launch' : 'Locked'}
+            </button></div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- CONTAINER CARD (UPDATED: Logs Button) ---
+const ContainerCard = ({ container, onAction, onViewLogs, ownerName }) => {
+  const isRunning = container.status === 'running';
+  const isProcessing = container.status === 'processing';
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 shadow-sm hover:border-blue-500 transition-colors">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-md ${isRunning?'bg-green-500/20 text-green-400':'bg-slate-700 text-slate-400'}`}>{isProcessing ? <Loader2 className="animate-spin" size={20}/> : <Box size={20}/>}</div>
+          <div className="overflow-hidden"><div className="font-semibold text-white truncate w-40" title={container.name}>{container.name}</div><div className="text-xs text-slate-400 font-mono truncate w-40" title={container.image}>{container.image}</div></div>
+        </div>
+        <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${isRunning?'text-green-400 bg-green-900/20':'text-red-400 bg-red-900/20'}`}>{container.status}</span>
+      </div>
+      {ownerName && <div className="mb-3 text-xs bg-slate-900 rounded px-2 py-1 border border-slate-700 inline-flex items-center gap-1 text-slate-400"><Users size={10}/> <span className="font-medium text-blue-300">{ownerName}</span></div>}
+      <div className="flex gap-2 mt-auto">
+        {isProcessing ? <button disabled className="flex-1 bg-slate-700 text-slate-400 py-1.5 rounded text-xs flex justify-center gap-1 cursor-not-allowed"><Loader2 className="animate-spin" size={14}/> Processing...</button> : (
+          <>
+            {!isRunning ? 
+              <button onClick={()=>onAction(container.id, 'start')} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-1.5 rounded text-xs flex items-center justify-center gap-1 font-medium"><Play size={14}/> Start</button> :
+              <button onClick={()=>onAction(container.id, 'stop')} className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white py-1.5 rounded text-xs flex items-center justify-center gap-1 font-medium"><Square size={14}/> Stop</button>
+            }
+            <button onClick={()=>onViewLogs(container)} className="bg-slate-700 hover:bg-slate-600 text-slate-300 p-1.5 rounded" title="View Logs"><FileText size={16}/></button>
+            <button onClick={()=>onAction(container.id, 'delete')} className="bg-red-900/30 hover:bg-red-900/50 text-red-400 p-1.5 rounded transition-colors"><Trash2 size={16}/></button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN APP ---
+export default function DockerManager() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [containers, setContainers] = useState([]);
+  const [images, setImages] = useState([]);
+  const [imageMeta, setImageMeta] = useState({});
+  const [userSavedVars, setUserSavedVars] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [systemStats, setSystemStats] = useState(null);
+  const [viewMode, setViewMode] = useState('dashboard');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [fetchError, setFetchError] = useState(false);
+  
+  // LOGS STATE
+  const [logsContainer, setLogsContainer] = useState(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    if(savedUser) setCurrentUser(JSON.parse(savedUser));
+  }, []);
+
+  const fetchContainers = useCallback(async () => {
+    if(!currentUser) return;
+    try {
+      const headers = {'x-user-id': currentUser.id};
+      const contRes = await fetch(`${API_URL}/containers`, {headers});
+      if(contRes.ok) {
+        setContainers(await contRes.json());
+        setFetchError(false);
+      } else throw new Error("Fetch failed");
+    } catch(e) { console.error(e); setFetchError(true); }
+  }, [currentUser]);
+
+  const fetchSystemData = useCallback(async () => {
+    if(!currentUser) return;
+    try {
+      const headers = {'x-user-id': currentUser.id};
+      const [imgRes, metaRes, confRes] = await Promise.all([
+        fetch(`${API_URL}/images`),
+        fetch(`${API_URL}/meta`),
+        fetch(`${API_URL}/configs`, {headers})
+      ]);
+      if(imgRes.ok) setImages(await imgRes.json());
+      if(metaRes.ok) setImageMeta(await metaRes.json());
+      if(confRes.ok) setUserSavedVars((await confRes.json()).savedVars || []);
+      if (currentUser.role === 'admin' || currentUser.role === 'dev_user') {
+         const sysRes = await fetch(`${API_URL}/system`, {headers});
+         const userRes = await fetch(`${API_URL}/admin/users`, {headers});
+         if (sysRes.ok) setSystemStats(await sysRes.json());
+         if (userRes.ok) setAllUsers(await userRes.json());
+      }
+    } catch(e) { console.error(e); }
+  }, [currentUser]);
+
+  useEffect(() => { if(currentUser) { fetchSystemData(); fetchContainers(); } }, [currentUser, fetchSystemData, fetchContainers]);
+  useEffect(() => { if(currentUser) { const i = setInterval(fetchContainers, 3000); return ()=>clearInterval(i); } }, [fetchContainers, currentUser]);
+
+  const handleAuth = async (type, u, p) => { /*...Code cũ...*/ 
+    setAuthLoading(true); setAuthError('');
+    try {
+      const res = await fetch(`${API_URL}/${type}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username:u, password:p}) });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error);
+      setCurrentUser(data); localStorage.setItem('currentUser', JSON.stringify(data));
+    } catch(e) { setAuthError(e.message); } finally { setAuthLoading(false); }
+  };
+
+  const handleSaveMeta = async (id, meta) => { await fetch(`${API_URL}/meta`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id, meta})}); setImageMeta(prev => ({...prev, [id]: meta})); };
+  const handleSaveVars = async (vars) => { await fetch(`${API_URL}/configs`, {method:'POST', headers:{'Content-Type':'application/json', 'x-user-id':currentUser.id}, body:JSON.stringify({savedVars: vars})}); setUserSavedVars(vars); };
+  const handleAction = async (id, action) => {
+    if(action === 'delete' && !confirm('Sure?')) return;
+    setContainers(prev => prev.map(c => c.id === id ? {...c, status:'processing'} : c));
+    try { await fetch(`${API_URL}/containers/${id}/${action}`, {method:'POST', headers:{'x-user-id':currentUser.id}}); setTimeout(fetchContainers, 500); setTimeout(fetchContainers, 1500); } catch(e) { alert("Failed"); fetchContainers(); }
+  };
+  const handleCreate = async (data) => { /*...Code cũ...*/ 
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/containers`, {method:'POST', headers:{'Content-Type':'application/json', 'x-user-id':currentUser.id}, body:JSON.stringify(data)});
+      if(!res.ok) throw new Error((await res.json()).error);
+      fetchContainers(); setIsModalOpen(false);
+    } catch(e) { alert(e.message); } finally { setLoading(false); }
+  };
+  
+  // --- DELETE IMAGE ---
+  const handleDeleteImage = async (name, tag) => {
+      if(!confirm(`Delete image ${name}:${tag}?`)) return;
+      try {
+        const imageId = encodeURIComponent(`${name}:${tag}`);
+        const res = await fetch(`${API_URL}/images/${imageId}`, {
+            method: 'DELETE', headers: { 'x-user-id': currentUser.id }
+        });
+        if(!res.ok) throw new Error("Failed");
+        fetchSystemData();
+      } catch(e) { alert(e.message); }
+  };
+
+  if(!currentUser) return <AuthScreen onLogin={(u,p)=>handleAuth('login',u,p)} onRegister={(u,p)=>handleAuth('register',u,p)} isLoading={authLoading} error={authError}/>;
+
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'dev_user';
+  const myContainers = containers.filter(c => c.ownerId === currentUser.id);
+  const quotaUsed = myContainers.length;
+  const getOwnerName = (id) => { if(id===currentUser.id) return 'You'; const u=allUsers.find(u=>u.id===id); return u?u.username:id.substring(0,8); };
+
+  return (
+    <div className="flex h-screen bg-slate-900 text-slate-200 font-sans">
+      {/* Sidebar */}
+      <div className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col">
+        <div className="p-6"><div className="text-xl font-bold text-white flex gap-2 items-center"><Cpu className="text-blue-500"/> DockManager</div><div className="text-[10px] mt-1 flex items-center gap-1 text-green-500"><div className="w-2 h-2 rounded-full bg-green-500"/> Online System</div></div>
+        <nav className="flex-1 px-3 space-y-1">
+          <button onClick={()=>setViewMode('dashboard')} className={`w-full text-left px-4 py-3 rounded-lg flex gap-3 items-center transition-colors ${viewMode==='dashboard'?'bg-blue-600/10 text-blue-400':'hover:bg-slate-900 text-slate-400'}`}><Server size={18}/> <span className="font-medium">Dashboard</span></button>
+          {isAdmin && <><button onClick={()=>setViewMode('builder')} className={`w-full text-left px-4 py-3 rounded-lg flex gap-3 items-center transition-colors ${viewMode==='builder'?'bg-blue-600/10 text-blue-400':'hover:bg-slate-900 text-slate-400'}`}><Hammer size={18}/> <span className="font-medium">Image Builder</span></button></>}
+          {isAdmin && <><button onClick={()=>setViewMode('users')} className={`w-full text-left px-4 py-3 rounded-lg flex gap-3 items-center transition-colors ${viewMode==='users'?'bg-blue-600/10 text-blue-400':'hover:bg-slate-900 text-slate-400'}`}><Users size={18}/> <span className="font-medium">Users</span></button><button onClick={()=>setViewMode('images')} className={`w-full text-left px-4 py-3 rounded-lg flex gap-3 items-center transition-colors ${viewMode==='images'?'bg-blue-600/10 text-blue-400':'hover:bg-slate-900 text-slate-400'}`}><Database size={18}/> <span className="font-medium">Registry</span></button></>}
+          <button onClick={()=>setViewMode('settings')} className={`w-full text-left px-4 py-3 rounded-lg flex gap-3 items-center transition-colors ${viewMode==='settings'?'bg-blue-600/10 text-blue-400':'hover:bg-slate-900 text-slate-400'}`}><Settings size={18}/> <span className="font-medium">Settings</span></button>
+        </nav>
+        <div className="p-4 border-t border-slate-800"><div className="flex items-center gap-3 mb-4"><div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow-lg">{currentUser.username[0].toUpperCase()}</div><div className="overflow-hidden"><div className="text-sm font-bold text-white truncate">{currentUser.username}</div><div className="text-xs text-slate-500 capitalize flex items-center gap-1">{currentUser.role==='admin'&&<Shield size={10} className="text-yellow-500"/>} {currentUser.role}</div></div></div><button onClick={()=>{setCurrentUser(null);localStorage.removeItem('currentUser')}} className="w-full bg-slate-900 hover:bg-red-900/20 border border-slate-700 hover:border-red-800 text-slate-400 hover:text-red-400 py-2 rounded text-xs flex justify-center gap-2 transition-colors font-medium"><LogOut size={14}/> Sign Out</button></div>
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {fetchError && <div className="absolute top-0 left-0 right-0 bg-red-600 text-white text-center text-xs py-1 z-50 flex items-center justify-center gap-2"><AlertTriangle size={12}/> Cannot connect to API. Please check network or HTTP/HTTPS config.</div>}
+        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-8 bg-slate-900/80 backdrop-blur-sm"><h2 className="text-lg font-bold text-white capitalize flex items-center gap-2">{viewMode==='dashboard'?'My Dashboard':viewMode}</h2>{viewMode==='dashboard' && <div className="flex items-center gap-6"><div className="flex flex-col items-end text-xs"><span className="text-slate-500 font-bold uppercase">My Quota</span><span className={`${quotaUsed>=currentUser.containerLimit?'text-red-400':'text-blue-400'} font-mono`}>{quotaUsed} / {currentUser.containerLimit}</span></div><button onClick={()=>setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold flex gap-2 items-center shadow-lg shadow-blue-900/20 ml-4 transition-all"><Plus size={18}/> New Container</button></div>}</header>
+        <main className="flex-1 overflow-y-auto p-8">
+          {viewMode==='dashboard' && <><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{myContainers.length?myContainers.map(c=><ContainerCard key={c.id} container={c} onAction={handleAction} ownerName={null} onViewLogs={setLogsContainer}/>):<div className="col-span-full h-32 flex flex-col items-center justify-center text-slate-600 border-2 border-dashed border-slate-800 rounded-xl"><p>No containers running.</p></div>}</div>{isAdmin && <div className="mt-8"><h3 className="text-slate-400 font-bold uppercase text-xs mb-4">System Overview</h3><SystemOverview stats={systemStats} totalUsers={allUsers.length}/></div>}</>}
+          {viewMode==='builder' && isAdmin && <ImageBuilder currentUser={currentUser}/>}
+          {viewMode==='images' && isAdmin && <ImageRegistryManager images={images} meta={imageMeta} onSaveMeta={handleSaveMeta} onDeleteImage={handleDeleteImage}/>}
+          {viewMode==='settings' && <UserSettings savedVars={userSavedVars} onSave={handleSaveVars} currentUser={currentUser}/>}
+          {viewMode==='users' && isAdmin && <UserManagement currentUser={currentUser} allContainers={containers} onAction={handleAction}/>}
+        </main>
+      </div>
+      <CreateContainerModal isOpen={isModalOpen} onClose={()=>setIsModalOpen(false)} images={images} onCreate={handleCreate} imageMeta={imageMeta} userSavedVars={userSavedVars} userQuotaRemaining={currentUser.containerLimit-quotaUsed} isLoading={loading} currentUser={currentUser}/>
+      {logsContainer && <ContainerLogsModal containerId={logsContainer.id} containerName={logsContainer.name} onClose={()=>setLogsContainer(null)} currentUser={currentUser}/>}
+    </div>
+  );
+}
