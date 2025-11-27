@@ -1,1 +1,57 @@
-# mcp-server
+# MCP Server Manager (Docker Edition)
+
+Dự án **MCP Server Manager** cung cấp một MCP Server miễn phí cho cộng
+đồng, giúp bạn dễ dàng triển khai và quản lý thông qua Docker.
+
+## 🚀 Tính năng
+
+-   Chạy MCP Server nhanh chóng bằng Docker\
+-   Quản lý, mở rộng tool MCP dễ dàng\
+-   Hỗ trợ cộng đồng, phù hợp học tập & nghiên cứu\
+-   Mã nguồn tham khảo từ **Gemini Pro 3**\
+-   Triển khai được trên Linux, VPS, máy cá nhân
+
+### Image Build 
+- 
+
+## 🌐 Website chính thức
+
+**https://mcpxiaozhi.cybersma.com/**
+
+
+### 🛠️ 1. Cài đặt Client
+```bash
+npm install
+npm install lucide-react
+npm install react react-dom
+```
+Môi trường test
+```bash
+sudo npm run dev
+```
+
+### 🛠️ 1. Cài đặt Server
+```bash
+npm install tar-fs simple-git
+npm install express
+```
+
+### 🏗️ 4. Build ứng dụng (Production)
+sudo npm run build
+sudo npm install -g serve
+serve -s dist -l 5173
+
+
+## 📖 Giấy phép
+
+Dự án sử dụng giấy phép **MIT License**, chia sẻ cho cộng đồng nhằm mục
+đích học tập và mở rộng tri thức.
+
+## ❤️ Đóng góp
+
+Mọi đóng góp đều được chào đón!\
+Hãy tạo Pull Request hoặc mở Issue để cải thiện dự án.
+
+------------------------------------------------------------------------
+
+**Made with ❤️ for the community**
