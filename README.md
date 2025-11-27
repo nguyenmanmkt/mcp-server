@@ -16,12 +16,11 @@ Dự án **MCP Server Manager** cung cấp một MCP Server miễn phí cho cộ
 ### Image Build 
 <img width="1620" height="885" alt="image" src="https://github.com/user-attachments/assets/2efce89a-1f6b-4f3f-a730-c23bfb6923e5" />
 Cho phép build image mcp-server trực tiếp từ link github
-**https://mcpxiaozhi.cybersma.com/**
+Mẫu triển khai: https://github.com/nguyenmanmkt/mcp-xiaozhi-example.git
 
 ## 🌐 Website chính thức
 
-**[Mẫu github MCP](https://github.com/nguyenmanmkt/mcp-xiaozhi-example.git)**
-
+**https://mcpxiaozhi.cybersma.com/**
 
 ### 🛠️ 1. Cài đặt Client
 ```bash
