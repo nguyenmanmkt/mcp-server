@@ -1,3 +1,5 @@
 database.json
 node_modules/
 .env
+dist/
+client@0.0.0
