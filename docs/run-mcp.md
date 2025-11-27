@@ -11,5 +11,7 @@
 - Nhập biến môi trường khác nếu cần
 - Nhập Tên mcp-server
 - Lauch để khởi tạo
+- Kiểm tra trên MCP Enpoint trên xiaozhi.me xem tên tool đã kết nối chưa
+  <img width="738" height="514" alt="image" src="https://github.com/user-attachments/assets/cbe61948-6cbd-4c4a-8458-84e3d440a82f" />
 
 
