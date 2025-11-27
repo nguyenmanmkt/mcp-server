@@ -24,6 +24,12 @@ Dự án **MCP Server Manager** cung cấp một MCP Server miễn phí cho cộ
 Cho phép build image mcp-server trực tiếp từ link github
 Mẫu triển khai: https://github.com/nguyenmanmkt/mcp-xiaozhi-example.git
 
+## Developer Documentation
+
+- [Chạy mcp-server](docs/create-mcp.md) - Cách để chạy mcp-server cho thiết bị xiaozhi của bạn
+- [Sử dụng MCP_ENDPOINT ](docs/endpoint-xiaozhi.md) - Cách lấy thông tin MCP_ENDPOINT 
+- [Build Image MCP Cá Nhân ](docs/build-image-mcp.md) - Tự xây dựng một mcp-server cá nhân
+
 
 ### 🛠️ 1. Cài đặt Client
 ```bash
